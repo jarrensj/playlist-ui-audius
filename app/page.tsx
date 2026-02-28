@@ -51,7 +51,8 @@ function formatPlayCount(count: number): string {
 }
 
 async function getPlaylist(): Promise<Playlist> {
-  const res = await fetch("https://api.audius.co/v1/playlists/l5Q60YO", {
+  const playlistId = process.env.NEXT_PUBLIC_PLAYLIST_ID || "l5Q60YO";
+  const res = await fetch(`https://api.audius.co/v1/playlists/${playlistId}`, {
     next: { revalidate: 60 },
   });
   const data: ApiResponse = await res.json();
