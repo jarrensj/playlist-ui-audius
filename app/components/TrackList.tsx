@@ -10,12 +10,33 @@ interface Track {
     "150x150": string;
     "480x480": string;
     "1000x1000": string;
+    mirrors?: string[];
   };
   user: {
     name: string;
   };
   duration: number;
   play_count: number;
+}
+
+function getArtworkWithMirror(artwork: Track["artwork"], size: "150x150" | "480x480" | "1000x1000", mirrorIndex: number): string | null {
+  const url = artwork?.[size];
+  if (!url) return null;
+
+  if (mirrorIndex === 0) return url;
+
+  const mirrors = artwork.mirrors;
+  if (!mirrors || mirrorIndex > mirrors.length) return null;
+
+  try {
+    const parsed = new URL(url);
+    const mirror = mirrors[mirrorIndex - 1];
+    const mirrorHost = new URL(mirror).host;
+    parsed.host = mirrorHost;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
 }
 
 function formatDuration(seconds: number): string {
@@ -32,6 +53,30 @@ function formatPlayCount(count: number): string {
     return `${(count / 1000).toFixed(1)}K`;
   }
   return count.toString();
+}
+
+function TrackArtwork({ artwork, alt, size = "150x150" }: { artwork: Track["artwork"]; alt: string; size?: "150x150" | "480x480" | "1000x1000" }) {
+  const [mirrorIndex, setMirrorIndex] = useState(0);
+  const maxMirrors = (artwork?.mirrors?.length || 0) + 1;
+
+  const src = getArtworkWithMirror(artwork, size, mirrorIndex);
+
+  if (!src || mirrorIndex >= maxMirrors) {
+    return null;
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="h-full w-full object-cover opacity-90 grayscale-[20%]"
+      onError={() => {
+        if (mirrorIndex < maxMirrors - 1) {
+          setMirrorIndex(mirrorIndex + 1);
+        }
+      }}
+    />
+  );
 }
 
 export default function TrackList({ tracks }: { tracks: Track[] }) {
@@ -123,11 +168,7 @@ export default function TrackList({ tracks }: { tracks: Track[] }) {
               )}
             </div>
             <div className="h-10 w-10 shrink-0 overflow-hidden rounded-sm border border-stone-700">
-              <img
-                src={track.artwork["150x150"]}
-                alt={track.title}
-                className="h-full w-full object-cover opacity-90 grayscale-[20%]"
-              />
+              <TrackArtwork artwork={track.artwork} alt={track.title} />
             </div>
             <div className="flex-1 overflow-hidden">
               <p className={`truncate text-sm ${
@@ -169,11 +210,7 @@ export default function TrackList({ tracks }: { tracks: Track[] }) {
               )}
             </button>
             <div className="h-10 w-10 shrink-0 overflow-hidden rounded-sm border border-stone-700">
-              <img
-                src={currentTrack.artwork["150x150"]}
-                alt={currentTrack.title}
-                className="h-full w-full object-cover"
-              />
+              <TrackArtwork artwork={currentTrack.artwork} alt={currentTrack.title} />
             </div>
             <div className="flex-1 overflow-hidden">
               <p className="truncate text-sm text-stone-200">
